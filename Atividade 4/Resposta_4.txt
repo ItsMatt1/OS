@@ -1,0 +1,131 @@
+O sistema fsck (file system consistency check) é usado para verificar a consistencia de um 
+sistema de arquivos 
+no Unix e sistemas semelhantes. (Pronuncia-se f-suck). 
+Um comando semelhante, CHKDSK, existe no Microsoft Windows e em seu ancestral, o MS-DOS.
+
+O fsck é inicializado junto com o sistema, quando é detectado que existe um problema com sistema 
+de arquivos 
+ou que está num estado inconsistente, indicando um 
+desligamento anormal, como um travamento ou desligamento de energia. Tipicamente, o fsck 
+disponibiliza opções 
+para reparar sistemas de arquivos danificados: interativamente (o 
+usuário tem que decidir como consertar problemas específicos), permitir ao fsck resolver 
+problemas específicos 
+(assim o usuário não precisa responder nenhuma 
+questão), ou rever os problemas que precisam ser resolvidos num sistema de arquivos sem 
+realmente resolvê-los.
+
+Fsck também pode ser rodado manualmente pelo administrador do sistema se ele acredita que há um 
+problema com o sistema de arquivos. Os arquivos parcialmente recuperados, quando o nome do 
+arquivo original não
+pode ser reconstruído, são tipicamente recuperados para um 
+diretório chamado "lost+found" que é armazenado na raiz 
+do sistema de arquivos.
+
+Bloco desaparecido:
+(Missing block)
+
+Você pode usar
+
+  hdfs fsck \
+  
+  Para determinar quais arquivos estão com problemas. Procure na saída por blocos ausentes ou 
+corrompidos (ignore os blocos sub-replicados por enquanto). Ou pode usar:
+
+  hdfs fsck / | egrep -v '^ \. + $' | grep -v eplica
+ 
+que ignora linhas com nada além de pontos e linhas falando sobre replicação.
+
+Depois de encontrar um arquivo que está corrompido
+
+  hdfs fsck / path / to / corrupt / file -locations -blocks -files
+  
+Use essa saída para determinar onde os blocos podem viver. Se o arquivo for maior do que o 
+tamanho do seu bloco, ele pode ter vários blocos.
+
+Você pode usar os números de bloco relatados para ir até os datanodes e os logs de namenode 
+procurando a máquina ou máquinas nas quais os blocos residiam. Tente procurar por erros de 
+sistema de arquivos 
+nessas máquinas. Pontos de montagem ausentes, datanode não funcionando, sistema de arquivos 
+reformatado / reprovisionado. Se você puder encontrar um problema dessa forma e colocar o 
+bloqueio online 
+novamente, esse arquivo estará saudável novamente.
+
+Repita até que todos os arquivos estejam íntegros ou você esgote todas as alternativas 
+procurando os blocos.
+Depois de determinar o que aconteceu e você não pode recuperar mais nenhum bloco, basta usar o
+
+  hdfs fs -rm / caminho / para / arquivo / com / permanentemente / ausente / blocos
+  
+Comando para fazer com que seu sistema de arquivos HDFS volte à integridade para que você possa 
+começar a rastrear novos erros. 
+
+
+Consistencia do block:
+(Block Inconsistencies)
+
+Você pode usar a saída dos comandos hdfs fsck ou hdfs dfsadmin -report para obter informações 
+sobre 
+inconsistências com os blocos de dados HDFS, como blocos ausentes, mal replicados ou 
+subreplicados.
+
+Blocos ausentes: certifique-se de que os discos em execução neles estejam íntegros. Isso deve 
+ajudar na recuperação dos blocos que possuem réplicas recuperáveis ​​(indicados 
+como blocos ausentes). Se um arquivo contiver blocos corrompidos ou ausentes que não podem ser 
+recuperados, o arquivo terá dados ausentes e todos esses dados a partir do bloco ausente se 
+tornarão 
+inacessíveis por meio das ferramentas CLI e da API FileSystem. Na maioria dos casos, a única 
+solução é excluir o arquivo de dados (usando o comando hdfs fsck <path> -delete) e recuperar os 
+dados de outra 
+fonte.
+
+Deve ter cuidado ao excluir arquivos para garantir que não perca nenhum dado importante.
+
+Blocos subreplicados: o HDFS tenta corrigir automaticamente esse problema replicando os blocos 
+subreplicados para outros DataNodes e combinando o fator de replicação. Se a replicação 
+automática não 
+funcionar, você pode executar o HDFS Balancer para resolver o problema.
+
+Blocos com replicação incorreta: Execute o comando hdfs fsck -replicate para acionar a 
+replicação de blocos com replicação incorreta. Isso garante que os blocos sejam replicados 
+corretamente nos racks do 
+cluster. 
+
+Consistencia do sistema de diretórios:
+(File System Consistency)
+
+Verificador de consistência do sistema de arquivos (FSCK):
+FSCK é uma abordagem ainda usada por sistemas baseados em Linux mais antigos para encontrar e 
+reparar inconsistências.
+
+Verificações de superbloco:
+O FSCK executa uma verificação de integridade para ver se o tamanho do arquivo é maior que o 
+número de blocos alocados. Nesse caso, ele tenta encontrar o superbloco suspeito e usa uma cópia 
+alternativa.
+
+Verificações de bloco grátis:
+O FSCK também verifica os inodes para garantir que os blocos nos inodes sejam marcados como 
+alocados.
+
+Verificações de estado de inode:
+O FSCK verifica os inodes quanto a corrupção. Os inodes corrompidos são simplesmente apagados.
+Verificações de link de inode:
+FSCK conta o número de links para um inode e modifica a contagem de inode.
+
+Se um inode alocado não tiver nenhum diretório ou arquivo referente a ele, o FSCK o moverá para o diretório de 
+achados e perdidos.
+
+Ponteiros duplicados:
+FSCK verifica ponteiros duplicados. Por exemplo, se dois inodes tiverem ponteiros para o mesmo 
+bloco de dados, um dos inodes pode ser excluído.
+
+Blocos ruins:
+Um ponteiro inválido é simplesmente aquele que aponta para um endereço de memória que está fora 
+do intervalo. Nesse caso, FSCK exclui o ponteiro.
+
+Verificações de diretório:
+FSCK certifica-se de que o formato do diretório está correto, por exemplo, eles devem começar 
+com “.” e "..".
+
+Vantagens do FSCK:
+Requer pouco espaço superior. 

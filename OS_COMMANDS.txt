@@ -1,0 +1,3 @@
+gcc nome.c -o nome.exe
+
+./nome.exe

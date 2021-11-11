@@ -1,0 +1,23 @@
+O endereço gerado pela CPU é dividido em:
+
+O Número da página ou Page Number (p) é o número de bits necessários para representar as páginas no espaço de endereço lógico ou número da página.
+O Deslocamento de página ou offset (d) é número de bits necessários para representar uma palavra específica em uma página ou tamanho de página
+do Espaço de Endereço Lógico (Logical Address Space) ou número de palavra de uma página ou deslocamento de página. 
+
+Já o endereço físico é dividido em:
+
+Número do quadro ou Frame Number (f) é número de bits necessários para representar o quadro do Espaço de Endereço Físico ou número do quadro.
+Deslocamento de quadro ou Frame offset (d) é número de bits necessários para representar uma palavra particular em um quadro ou tamanho de
+quadro do Espaço de Endereço Físico ou número de palavra de um quadro ou deslocamento de quadro. 
+
+Divida a memória física em quadros:
+- Blocos de tamanho fixo.
+- O tamanho é a potência de 2, entre 512 bytes e 8.192 bytes.
+• Divida a memória virtual em páginas.
+- Mesmo tamanho dos quadros.
+• A tabela de páginas traduz endereços virtuais em físicos.
+
+Podemos encontrar o número da página e o deslocamento da página de um virtual endereço, se soubermos o tamanho das páginas.
+• Se o endereço virtual v tiver m bits (espaço de endereço virtual 2 ^ m), e se o tamanho das páginas for 2 ^ n, então:
+- os n bits menos significativos de v são usados como d.
+- os bits restantes de v são usados como p. 

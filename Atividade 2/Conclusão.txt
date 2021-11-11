@@ -1,0 +1,5 @@
+Cheguei a uma conclusão que o programa com multiplos processos é o que demorado tanto no real quanto no usuário quanto no sistema.
+O processo serial é o meio termo sendo mais rápido que com multiplos processos e mais lento um pouco que as multiplas threads.
+O programa com multiplas thread chegou a ter um tempo de sistema e de usuario de 0m0.000s e também foi o que menos levou tempo real, isso
+se deve porque as Threads usam a memória do processo ao qual pertencem, já a comunicação entre processos é lenta porque os processos têm endereços 
+de memória diferentes.

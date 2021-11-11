@@ -1,0 +1,167 @@
+/******************************************************************************
+*   arquivo...: jantar_dos_filosofos.c
+*   descriусo.: Um clássico da programação paralela, Dijkstra (1965)
+*
+*
+*   autor.....: Uilian Ries      <uilianries@gmail.com>
+*   data......: 27/11/2012
+*
+********************************************************************************/
+
+// Para executar use o comando abaixo:
+// gcc jantar_dos_filosofos.c -o jantar_dos_filosofos.out -lpthread
+// ./jantar_dos_filosofos.out
+
+//-- INCLUDE --------------------------------------------------------------------
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+//-- CONSTANTES -----------------------------------------------------------------
+#define QUANT (5)                                  //Quantidade de filósofos
+#define ESQUERDA (id_filosofo + QUANT - 1) % QUANT //Id do filósofo a esquerda do id
+#define DIREITA (id_filosofo + 1) % QUANT          //Id do filósofo a direita do id
+#define PENSANDO (0)                               //Id para estado pensado
+#define FAMINTO (1)                                //Id para estado de fome
+#define COMENDO (2)                                //Id para estado comendo
+//-- GLOBAL ---------------------------------------------------------------------
+int estado[QUANT];               //Estado dos filósofos
+pthread_mutex_t mutex;           //Região crítica
+pthread_mutex_t mux_filo[QUANT]; //Mutex por filósofo
+pthread_t jantar[QUANT];         //Todos os filósofos
+//-- PROTOTIPAÇÃO ---------------------------------------------------------------
+void *filosofo(void *param);
+void pegar_garfo(int id_filosofo);
+void devolver_garfo(int id_filosofo);
+void intencao(int id_filosofo);
+void comer(int id_filosofo);
+void pensar(int id_filosofo);
+//-------------------------------------------------------------------------------
+/*!
+* @fn void * filosofo ( void * param )
+* @brief Função que simula um filósofo
+* @param vparam id do filósofo
+*/
+void *filosofo(void *vparam)
+{
+    int *id = (int *)(vparam); //Repassa o id do filósofo
+
+    printf("Filosofo %d foi criado com sucesso\n", *(id));
+
+    while (1)
+    {
+        pensar(*(id));         //Aguarda o filósofo pensar
+        pegar_garfo(*(id));    //Filósofo pega os garfos
+        comer(*(id));          //Aguarda comer
+        devolver_garfo(*(id)); //Devolver os garfos pra mesa
+    }
+
+    pthread_exit((void *)0); //Legado do retorno
+}
+//-------------------------------------------------------------------------------
+/*!
+* @fn void pegar_garfo ( int id_filosofo )
+* @brief Função que filósofo pega os garfos da mesa
+* @param id_filosofo id do filósofo
+*/
+void pegar_garfo(int id_filosofo)
+{
+    pthread_mutex_lock(&(mutex)); //Entra na regiсo crítica
+    printf("Filosofo %d esta faminto\n", id_filosofo);
+    estado[id_filosofo] = FAMINTO;                //Altera o estado do filósofo
+    intencao(id_filosofo);                        //Intenção de pegar os garfos
+    pthread_mutex_unlock(&(mutex));               //Sai na região crítica
+    pthread_mutex_lock(&(mux_filo[id_filosofo])); //Bloqueia os garfos
+}
+//-------------------------------------------------------------------------------
+/*!
+* @fn void devolver_garfo ( int id_filosofo )
+* @brief Função que filósofo devolve os garfos para a mesa
+* @param id_filosofo id do filósofo
+*/
+void devolver_garfo(int id_filosofo)
+{
+    pthread_mutex_lock(&(mutex)); //Entra na regiсo crítica
+    printf("Filosofo %d esta pensando\n", id_filosofo);
+    estado[id_filosofo] = PENSANDO; //Terminou de comer
+    intencao(ESQUERDA);             //Vê se o vizinho da esquerda pode comer agora
+    intencao(DIREITA);              //Vê se o vizinho da direita pode comer agora
+    pthread_mutex_unlock(&(mutex)); //Sai da regiсo crítica
+}
+//-------------------------------------------------------------------------------
+/*!
+* @fn void intencao ( int id_filosofo )
+* @brief Função que filósofo tem intenção de pegar os garfos para comer
+* @param id_filosofo id do filósofo
+*/
+void intencao(int id_filosofo)
+{
+    printf("Filosofo %d esta com intencao de comer\n", id_filosofo);
+    if ((estado[id_filosofo] == FAMINTO) && //Se o filósofo está come fome
+        (estado[ESQUERDA] != COMENDO) &&    //Se o vizinho da esquerda não está comendo
+        (estado[DIREITA] != COMENDO))       //Se o vizinho da direita nсo está comendo
+    {
+        printf("Filosofo %d ganhou a vez de comer\n", id_filosofo);
+        estado[id_filosofo] = COMENDO;                  //Filósofo ganho a vez de comer
+        pthread_mutex_unlock(&(mux_filo[id_filosofo])); //Libera os garfos
+    }
+}
+//-------------------------------------------------------------------------------
+/*!
+* @fn void pensar ( int id_filosofo )
+* @brief Função que filósofo fica pensando
+*/
+void pensar(int id_filosofo)
+{
+    int r = (rand() % 10 + 1);
+
+    printf("Filosofo %d pensa por %d segundos\n", id_filosofo, r);
+    sleep(r); //Gasta um tempo em segundos
+}
+//-------------------------------------------------------------------------------
+/*!
+* @fn void comer ( int id_filosofo )
+* @brief Função que filósofo fica comendo
+*/
+void comer(int id_filosofo)
+{
+    int r = (rand() % 10 + 1);
+
+    printf("Filosofo %d come por %d segundos\n", id_filosofo, r);
+    sleep(r); //Gasta um tempo em segundos
+}
+//-------------------------------------------------------------------------------
+int main(void)
+{
+    int cont;   //Contador auxiliar
+    int status; //Criação da thread
+
+    //Inicia os mutexes
+    pthread_mutex_init(&(mutex), NULL);
+    for (cont = 0; cont < QUANT; cont++)
+    {
+        pthread_mutex_init(&(mux_filo[cont]), NULL);
+    }
+
+    //Inicia threads (filósofos)
+    for (cont = 0; cont < QUANT; cont++)
+    {
+        //verifica se ocorreu erro
+        status = pthread_create(&(jantar[cont]), NULL, filosofo, (void *)&(cont));
+        if (status)
+        {
+            printf("Erro criando thread %d, retornou codigo %d\n", cont, status);
+            return EXIT_FAILURE;
+        }
+    }
+
+    //Destroi antes de sair
+    pthread_mutex_destroy(&(mutex));
+    for (cont = 0; cont < QUANT; cont++)
+    {
+        pthread_mutex_destroy(&(mux_filo[cont]));
+    }
+    pthread_exit(NULL);
+
+    return EXIT_SUCCESS;
+}
